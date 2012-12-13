@@ -16,7 +16,7 @@
 #include <avr/io.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
+//#include <stdio.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
 #include "type.h"
@@ -44,11 +44,10 @@ static uint8_t myip[4] = {192,168,1,10}; /** home local ip */
 
 #define BUFFER_SIZE 550
 static uint8_t buf[BUFFER_SIZE+1];
+//static char content [4];
 
 // the password string (only the first 5 char checked), (only a-z,0-9,_ characters):
 //static char password[]="secret"; // must not be longer than 9 char
-
-
 uint8_t verify_password(char *str)
 {
         return(0);
@@ -57,59 +56,21 @@ uint8_t verify_password(char *str)
 
 
 // prepare the webpage by writing the data to the tcp send buffer
-uint16_t print_webpage(uint8_t *buf,uint8_t on_off)
+uint16_t print_webpage(uint8_t *buf)
 {
         uint16_t plen;
 
         plen=fill_tcp_data_p(buf,0,PSTR("HTTP/1.0 200 OK\r\nContent-Type: text/html\r\nPragma: no-cache\r\n\r\n"));
-
-        plen=fill_tcp_data_p(buf,plen,PSTR("#"));
+        plen=fill_tcp_data(buf,plen,PSTR("#"));
+        plen=fill_tcp_data_p(buf,plen,PSTR("CRC failed\n"));
         //plen=fill_tcp_data(buf,plen,&TemArr[0][0]);
-
+        plen=fill_tcp_data(buf,plen,PSTR("end\n"));
         return(plen);
 }
 
 void Init_Timer0 (void){
     TCCR0 = ((1 << CS02) | ( 1 << CS00));   // prescaller 1024
     TIMSK |= 1 << TOIE0;                    // разрешить прерывания
-}
-
-
-
-void PrintWord(WORD val, char * Str)
-{
-
-    BYTE i;
-    Str[0] = 0;
-    Str[1] = 0;
-    Str[2] = 0;
-    Str[3] = 0;
-    Str[4] = 0;
-
-
-    while(val >= 10000){
-        val -= 10000;
-        Str[0]++;
-    }
-    while(val >= 1000){
-        val -= 1000;
-        Str[1]++;
-    }
-    while(val >= 100){
-        val -= 100;
-        Str[2]++;
-    }
-    while(val >= 10){
-        val -= 10;
-        Str[3]++;
-    }
-
-    Str[4] = val;
-
-    for(i = 0; i < 5; i++)
-    {
-            Str[i] += 0x30;
-    }
 }
 
 
@@ -137,8 +98,10 @@ BYTE ReadTempr(void)
     OneWire_WriteByte(0xcc);
     OneWire_WriteByte(0xbe);
 
-    OneWire_ReadData(DS_Buff, 2);
-    //OneWire_CRC_calc(DS_Buff, 9);
+    OneWire_ReadData(DS_Buff, 9);
+    if (OneWire_CRC_calc(DS_Buff, 9) != 0) {
+      //sprintf (content, "%s", "CRC fail");
+    }
 
     TemArr[1] = 0;
     TemArr[2] = 0;
@@ -178,17 +141,20 @@ BYTE ReadTempr(void)
 // that is in 30Hz intervals
 ISR(TIMER0_OVF_vect)
 {
-static BYTE TickPerSec = 0;
+  static int TickPerSec = 0;
+  static int delaySec = 0;
 
-
-
-    TickPerSec++;
-    if(TickPerSec > 30)
-    {
-        ReadTempr();
-        TGLBIT(PORTD, PORTD0); // мигаем светодиодом
-        TickPerSec = 0;
-    }
+  TickPerSec++;
+  if(TickPerSec > 30)
+  {
+    TickPerSec = 0;
+//    delaySec++;
+//    if (delaySec > 10) {
+//      delaySec = 0;
+      //ReadTempr();
+      TGLBIT(PORTD, PORTD0); // переключаем светодиод
+//    }
+  }
 }
 
 
@@ -321,7 +287,7 @@ int main(void){
                                 }
                                 // if (cmd==-2) or any other value
                                 // just display the status:
-                                plen=print_webpage(buf,(PORTD & (1<<PORTD0)));
+                                plen=print_webpage(buf);
                                 //
 SENDTCP:
                                 make_tcp_ack_from_any(buf); // send ack for http get
