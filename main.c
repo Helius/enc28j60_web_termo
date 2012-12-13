@@ -130,7 +130,7 @@ BYTE ReadTempr(void)
 ISR(TIMER0_OVF_vect)
 {
   static int TickPerSec = 0;
-  static int secCount = 21;
+  static int secCount = 151;
     TickPerSec++;
     if(TickPerSec > 60) // 2 sec
     {
