@@ -115,8 +115,13 @@ BYTE ReadTempr(void)
       minus = "";
       ti = DS_Buff[0]/2;
     }
-    accure = ti*100 -25 + (100*(DS_Buff[7]-DS_Buff[6]))/DS_Buff[7];
-    snprintf (content, CONTENT_SIZE, "%s %x %x %x %x\n#%s%d.%d", "CRC ok\n",DS_Buff[0],DS_Buff[1],DS_Buff[6],DS_Buff[7],minus,accure/100,accure%100);
+    //accure = ti*100 -25 + (100*(DS_Buff[7]-DS_Buff[6]))/DS_Buff[7];
+    //snprintf (content, CONTENT_SIZE, "%s %x %x %x %x\n#%s%d.%d", "CRC ok\n",DS_Buff[0],DS_Buff[1],DS_Buff[6],DS_Buff[7],minus,accure/100,accure%100);
+    if (DS_Buff[0]&1)
+      accure = 5;
+    else
+      accure = 0;
+    snprintf (content, CONTENT_SIZE, "%s %x %x %x %x\n#%s%d.%d", "CRC ok\n",DS_Buff[0],DS_Buff[1],DS_Buff[6],DS_Buff[7],minus,ti,accure);
 
     OneWire_ResetDevice();
     OneWire_WriteByte(0xcc);
